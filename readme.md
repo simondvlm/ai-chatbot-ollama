@@ -119,6 +119,7 @@ $pdo = new PDO($dsn, $user, $pass, $options);
 │   ├── 📄 server.js
 │   └── 📄 start_server.sh
 ├── ⚙️ .htaccess
+├── 📄 database.sql
 ├── 🐘 index.php
 ├── 🐘 login.php
 ├── 🐘 profil.php
@@ -170,4 +171,5 @@ $pdo = new PDO($dsn, $user, $pass, $options);
 
 **Settings Part 2**  
 ![Settings Part 2](assets/Screenshots/setting-part2.png)
+
 
