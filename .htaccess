@@ -1,0 +1,25 @@
+# if its on localhost this file will be ignored
+
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}\.php -f
+RewriteRule ^(.*)$ $1.php [L]
+RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ /index\.php
+RewriteRule ^index\.php$ / [R=301,L]
+Options -Indexes
+
+<Files "process.php">
+    Order Allow,Deny
+    Allow from all
+</Files>
+<IfModule mod_security.c>
+    SecFilterEngine Off
+    SecFilterScanPOST Off
+</IfModule>
+<IfModule mod_security2.c>
+    SecRuleEngine Off
+</IfModule>
+
+ErrorDocument 403 https://nicechatbot.rf.gd/error/403.php
+ErrorDocument 404 https://nicechatbot.rf.gd/error/404.php
+ErrorDocument 500 https://nicechatbot.rf.gd/error/500.php
