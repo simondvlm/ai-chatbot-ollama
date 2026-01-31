@@ -55,7 +55,7 @@ npm install
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/yourusername/ai-chatbot.git
+git clone https://github.com/xottik88/ai-chatbot-ollama.git
 cd ai-chatbot
 ```
 
@@ -170,3 +170,4 @@ $pdo = new PDO($dsn, $user, $pass, $options);
 
 **Settings Part 2**  
 ![Settings Part 2](assets/Screenshots/setting-part2.png)
+
