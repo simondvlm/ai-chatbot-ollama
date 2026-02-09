@@ -8,18 +8,13 @@ $cpuTemps = [];
 $cpuFreqs = [];
 $ramUsed = [];
 $labels = [];
-
 $risks = ["LOW" => 0, "MEDIUM" => 0, "HIGH" => 0];
-
 $totalSSH = 0;
 $avgTemp = 0;
-
 $currentTemp = 0;
 $currentFreq = 0;
 $currentRamUsed = 0;
 $ramTotal = 0;
-
-// Informations système (nouvelles variables)
 $osInfo = 'N/A';
 $ipAddress = 'N/A';
 $netmask = 'N/A';
@@ -349,17 +344,9 @@ $histories = $stmtHistory->fetchAll(PDO::FETCH_ASSOC);
                         <?= $p['risk'] === 'HIGH' ? '⚠️ Attention requise' : '✓ Normal' ?>
                         <br>
 
-                        <a href="../chatbot/chatbot.php?q=<?= urlencode(
-                            'Analyse ces données de sécurité : ' .
-                            'CPU ' . $p['cpu_temp_c'] . '°C, ' .
-                            (isset($p['cpu_freq_mhz']) ? 'Fréq ' . round($p['cpu_freq_mhz']) . ' MHz, ' : '') .
-                            (isset($p['ram_used_mb'], $p['ram_total_mb']) ? 'RAM ' . $p['ram_used_mb'] . '/' . $p['ram_total_mb'] . ' MB (' . $ramPercent . '%), ' : '') .
-                            'SSH échoués ' . $p['ssh_failed_count'] . ', ' .
-                            'Risque ' . $p['risk']
-                        ) ?>"
-                        style="display:inline-block;margin-top:5px;padding:3px 8px;background:var(--accent);color:white;border-radius:4px;text-decoration:none;font-size:12px;">
+                        <button onclick="analyzeData()" style="display:inline-block;margin-top:5px;padding:3px 8px;background:var(--accent);color:white;border-radius:4px;text-decoration:none;font-size:12px;border:none;padding: 10px;cursor:pointer;">
                             <i class='bx bx-brain'></i> Analyser avec l'IA
-                        </a>
+                        </button>
                     </td>
                 </tr>
                 <?php endforeach; ?>
@@ -372,12 +359,9 @@ $histories = $stmtHistory->fetchAll(PDO::FETCH_ASSOC);
             </a>
         </div>
     </div>
-
-        </div><!-- fin content-scrollable -->
-        
-    </div><!-- fin main-content -->
-    
-</div><!-- fin app-container -->
+        </div>
+    </div>
+</div>
 
 <script>
 let cpuChart = null;
@@ -390,28 +374,36 @@ function toggleSidebar() {
     overlay.classList.toggle('active');
     menuBtn.classList.toggle('active');
 }
-function selectProfile(id) {
-    console.log('Profil sélectionné:', id);
-}
-
-function loadHistory(id) {
-    console.log('Charger historique:', id);
-    window.location.href = '../chatbot/index.php?history=' + id;
-}
-
-function deleteHistory(id) {
-    if (confirm('Supprimer cet historique ?')) {
-        console.log('Supprimer:', id);
-        // Ajouter votre logique de suppression ici
-    }
-}
-
 function usePrompt(prompt) {
     const encoded = encodeURIComponent(prompt);
     window.location.href = '../chatbot/index.php?q=' + encoded;
 }
-
-// Initialisation du graphique
+function loadEventData(index) {
+    const allEvents = <?= json_encode($events) ?>;
+    const eventData = allEvents[index];
+    
+    if (!eventData) return;
+    
+    const p = JSON.parse(eventData.payload);
+    
+    let message = `Analyse ces données de sécurité du ${new Date(eventData.ts * 1000).toLocaleString('fr-FR')} :\n\n`;
+    message += `• CPU: ${p.cpu_temp_c}°C`;
+    
+    if (p.cpu_freq_mhz !== undefined) {
+        message += ` | Fréq CPU: ${Math.round(p.cpu_freq_mhz)} MHz`;
+    }
+    
+    if (p.ram_used_mb !== undefined && p.ram_total_mb !== undefined) {
+        const percent = Math.round((p.ram_used_mb / p.ram_total_mb) * 100);
+        message += ` | RAM: ${p.ram_used_mb}/${p.ram_total_mb} MB (${percent}%)`;
+    }
+    
+    message += ` | SSH échoués: ${p.ssh_failed_count}`;
+    message += ` | Risque: ${p.risk}`;
+    
+    const encoded = encodeURIComponent(message);
+    window.location.href = `../chatbot/chatbot.php?auto=1&q=${encoded}`;
+}
 function initChart() {
     const canvas = document.getElementById('cpuChart');
     if (!canvas) return;
@@ -420,6 +412,7 @@ function initChart() {
 
     const temps = <?= json_encode($cpuTemps) ?>;
     const labels = <?= json_encode($labels) ?>;
+    const allEvents = <?= json_encode($events) ?>; // Récupérer tous les événements
 
     const gradient = ctx.createLinearGradient(0, 0, 0, 300);
     gradient.addColorStop(0, 'rgba(74, 158, 255, 0.15)');
@@ -449,7 +442,59 @@ function initChart() {
             animation: false,
             responsive: true,
             maintainAspectRatio: true,
-            plugins: { legend: { display: false } },
+            plugins: { 
+                legend: { display: false },
+                tooltip: {
+                    enabled: true,
+                    backgroundColor: 'rgba(30, 39, 46, 0.95)',
+                    titleColor: '#ffffff',
+                    bodyColor: '#ffffff',
+                    borderColor: '#4a9eff',
+                    borderWidth: 1,
+                    padding: 12,
+                    displayColors: false,
+                    titleFont: {
+                        size: 14,
+                        weight: 'bold'
+                    },
+                    bodyFont: {
+                        size: 13
+                    },
+                    footerFont: {
+                        size: 12,
+                        weight: 'bold'
+                    },
+                    footerColor: '#4a9eff',
+                    callbacks: {
+                        title: function(context) {
+                            return labels[context[0].dataIndex];
+                        },
+                        label: function(context) {
+                            return `Température: ${context.parsed.y}°C`;
+                        },
+                        afterLabel: function(context) {
+                            const eventData = allEvents[context.dataIndex];
+                            if (eventData) {
+                                const p = JSON.parse(eventData.payload);
+                                let info = `\nRisque: ${p.risk}`;
+                                info += `\nSSH échoués: ${p.ssh_failed_count}`;
+                                if (p.cpu_freq_mhz) {
+                                    info += `\nFréq CPU: ${Math.round(p.cpu_freq_mhz)} MHz`;
+                                }
+                                if (p.ram_used_mb && p.ram_total_mb) {
+                                    const percent = Math.round((p.ram_used_mb / p.ram_total_mb) * 100);
+                                    info += `\nRAM: ${p.ram_used_mb}/${p.ram_total_mb} MB (${percent}%)`;
+                                }
+                                return info;
+                            }
+                            return '';
+                        },
+                        footer: function(context) {
+                            return '\n🔍 Cliquez pour charger ces données';
+                        }
+                    }
+                }
+            },
             scales: {
                 x: { 
                     grid: { display: false, drawBorder: false }, 
@@ -461,12 +506,19 @@ function initChart() {
                     ticks: { color: '#8792a2' }, 
                     grid: { drawBorder: false, color: 'rgba(255,255,255,0.05)' } 
                 }
+            },
+            onClick: (event, activeElements) => {
+                if (activeElements.length > 0) {
+                    const dataIndex = activeElements[0].index;
+                    loadEventData(dataIndex);
+                }
+            },
+            onHover: (event, activeElements) => {
+                event.native.target.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
             }
         }
     });
 }
-
-// Mise à jour des données
 async function updateChart() {
     try {
         const res = await fetch('backend/get_latest_events.php');
@@ -478,6 +530,7 @@ async function updateChart() {
         console.error('Erreur update chart:', e);
     }
 }
+
 function analyzeData() {
     const events = <?= json_encode($events) ?>;
     if (!events.length) return;
@@ -502,12 +555,13 @@ function analyzeData() {
     const encoded = encodeURIComponent(message);
     window.location.href = `../chatbot/chatbot.php?auto=1&q=${encoded}`;
 }
+
 document.addEventListener('DOMContentLoaded', function() {
     initChart();
     setInterval(updateChart, 10);
 });
+
 setInterval(() => location.reload(), 30000);
 </script>
-
 </body>
 </html>
