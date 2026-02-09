@@ -1,514 +1,513 @@
 <?php
-session_start();
-require_once 'backend/config.php';
-// ini_set('display_errors', 1);
-// error_reporting(E_ALL);
+date_default_timezone_set('Europe/Paris');
+require 'backend/config.php';
+$stmt = $pdo->query("SELECT * FROM events ORDER BY id DESC LIMIT 30");
+$events = array_reverse($stmt->fetchAll(PDO::FETCH_ASSOC));
 
-if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
-    exit();
+$cpuTemps = [];
+$cpuFreqs = [];
+$ramUsed = [];
+$labels = [];
+
+$risks = ["LOW" => 0, "MEDIUM" => 0, "HIGH" => 0];
+
+$totalSSH = 0;
+$avgTemp = 0;
+
+$currentTemp = 0;
+$currentFreq = 0;
+$currentRamUsed = 0;
+$ramTotal = 0;
+
+// Informations système (nouvelles variables)
+$osInfo = 'N/A';
+$ipAddress = 'N/A';
+$netmask = 'N/A';
+$hostname = 'N/A';
+$openPorts = 'N/A';
+
+foreach ($events as $e) {
+    $p = json_decode($e['payload'], true);
+
+    // Température
+    $cpuTemps[] = $p['cpu_temp_c'];
+    $currentTemp = $p['cpu_temp_c'];
+
+    // Labels temps
+    $labels[] = date("H:i:s", $e['ts']);
+
+    // Risques
+    $risks[$p['risk']]++;
+
+    // SSH
+    $totalSSH += $p['ssh_failed_count'];
+
+    // Fréquence CPU
+    if (isset($p['cpu_freq_mhz'])) {
+        $cpuFreqs[] = $p['cpu_freq_mhz'];
+        $currentFreq = $p['cpu_freq_mhz'];
+    }
+
+    // RAM
+    if (isset($p['ram_used_mb'], $p['ram_total_mb'])) {
+        $ramUsed[] = $p['ram_used_mb'];
+        $currentRamUsed = $p['ram_used_mb'];
+        $ramTotal = $p['ram_total_mb'];
+    }
 }
-$user_id = $_SESSION['user_id'];
-$stmtUser = $pdo->prepare("SELECT system_sentences FROM users WHERE id = ?");
-$stmtUser->execute([$user_id]);
-$user = $stmtUser->fetch();
 
-// Profils IA
-$stmtProfiles = $pdo->prepare("SELECT id, name, system_prompt FROM ai_profiles WHERE user_id = ?");
-$stmtProfiles->execute([$user_id]);
+// Récupération des informations système depuis le dernier événement
+if (!empty($events)) {
+    $lastEvent = end($events);
+    $lastPayload = json_decode($lastEvent['payload'], true);
+    
+    if (isset($lastPayload['os'])) {
+        $osInfo = $lastPayload['os'];
+    }
+    if (isset($lastPayload['ip'])) {
+        $ipAddress = $lastPayload['ip'];
+    }
+    if (isset($lastPayload['netmask'])) {
+        $netmask = $lastPayload['netmask'];
+    }
+    if (isset($lastPayload['hostname'])) {
+        $hostname = $lastPayload['hostname'];
+    }
+    if (isset($lastPayload['open_ports'])) {
+        $openPorts = $lastPayload['open_ports'];
+    }
+}
+
+// Stats globales
+$avgTemp = !empty($cpuTemps) ? round(array_sum($cpuTemps) / count($cpuTemps), 1) : 0;
+$totalEvents = count($events);
+$criticalEvents = $risks['HIGH'];
+$maxTemp = !empty($cpuTemps) ? max($cpuTemps) : 0;
+$minTemp = !empty($cpuTemps) ? min($cpuTemps) : 0;
+
+// Profils AI (exemple)
+$stmtProfiles = $pdo->prepare("SELECT id, name FROM ai_profiles WHERE user_id = ? LIMIT 5");
+$stmtProfiles->execute([1]);
 $profiles = $stmtProfiles->fetchAll(PDO::FETCH_ASSOC);
 
-// Historique des conversations
-$stmt = $pdo->prepare("
-    SELECT ch.id, ch.messages, ch.created_at, p.name AS profile_name
-    FROM chat_history ch
-    LEFT JOIN ai_profiles p ON ch.profile_id = p.id
-    WHERE ch.user_id = ?
-    ORDER BY ch.created_at DESC
-    LIMIT 5
-");
-$stmt->execute([$user_id]);
-$histories = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-$systemSentences = $user['system_sentences'] ?? '';
+// Historique chat (exemple)
+$stmtHistory = $pdo->query("SELECT id, created_at FROM chat_history ORDER BY created_at DESC LIMIT 5");
+$histories = $stmtHistory->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>IA CHATBOT</title>
-<link rel="stylesheet" href="assets/style.css">
-<!--  Import from external website -->
+<title>Security Operations Center</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://cdn.boxicons.com/3.0.8/fonts/basic/boxicons.min.css" rel="stylesheet">
-<link href="https://cdn.boxicons.com/3.0.8/fonts/filled/boxicons-filled.min.css" rel="stylesheet">
-<link href="https://cdn.boxicons.com/3.0.8/fonts/brands/boxicons-brands.min.css" rel="stylesheet">
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<style>
-.prompt-item {
-    width: 80%;
-    text-align: left;
-    padding: 10px 15px;
-    margin: 5px 0;
-    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-    border: 1px solid #404040;
-    border-radius: 8px;
-    color: #e0e0e0;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    position: relative;
-    overflow: hidden;
-    margin-left:10px;
-}
-
-.prompt-item::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    height: 100%;
-    width: 3px;
-    background: linear-gradient(180deg, #dc2626 0%, #991b1b 100%);
-    transform: scaleY(0);
-    transition: transform 0.3s ease;
-}
-
-.prompt-item:hover {
-    background: linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%);
-    border-color: #dc2626;
-    transform: translateX(5px);
-    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
-}
-
-.prompt-item:hover::before {
-    transform: scaleY(1);
-}
-
-.prompt-item:active {
-    transform: translateX(3px) scale(0.98);
-    background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
-}
-
-.prompt-item i {
-    font-size: 16px;
-    color: #dc2626;
-    transition: color 0.3s ease;
-}
-
-.prompt-item:hover i {
-    color: #ef4444;
-}
-
-#prompt-list {
-    max-height: 300px;
-    overflow-y: auto;
-    padding-right: 5px;
-}
-</style>
+<link rel="stylesheet" href="assets/code.css">
 </head>
-<body>
-<button class="menu-btn" id="menu-toggle" style="margin-top:-10px;">
-    <span></span>
-    <span></span>
-    <span></span>
-</button>
-<div class="sidebar-overlay" id="sidebar-overlay"></div>
+<body style="font-family: 'Poppins', sans-serif;">
 <div id="app-container">
-    <div id="sidebar">
+    <aside id="sidebar">
         <div class="sidebar-header">
-            <h2>IA CHATBOT</h2>
-            <button class="new-chat-btn" id="reset-btn">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="12" y1="5" x2="12" y2="19"></line>
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                </svg>
-                Nouvelle conversation
-            </button><br>
-            <form action="backend/logout.php"><button class="new-chat-btn"><i class='bx  bx-arrow-in-right-square-half'></i> Se déconnecter</button></form><br>
-            <form action="settings.php"><button class="new-chat-btn"><i class='bx  bx-cog'></i>  Paramètres</button></form>
-        </div><br>
+            <h2>Navigation</h2>
+            <button class="new-chat-btn" onclick="location.href='../chatbot/index.php'"><i class="bx bx-dashboard"></i>Dashboard</button><br>
+            <button class="new-chat-btn" onclick="location.href='../chatbot/chatbot.php'"><i class="bx bx-message-circle-dots-2"></i>Chatbot</button>
+        </div>
         
-        <div class="settings-group">
-            <label style="margin-left:10px;">Profils IA</label>
-            <div id="profile-list">
-                <?php if (count($profiles) === 0): ?>
-                    <label style="margin-left:10px;margin-top:30px;">Aucun profil disponible. Ajoutez-en un<br>dans les paramètres !</label>
-                <?php else: ?>
-                    <?php foreach ($profiles as $profile): ?>
-                        <button type="button" class="profile-item" 
-                            data-id="<?= $profile['id'] ?>" 
-                            data-prompt="<?= htmlspecialchars($profile['system_prompt']) ?>">
-                            <?= htmlspecialchars($profile['name']) ?>
-                        </button>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </div>
-        </div>
-        <div class="settings-group">
+        <div class="sidebar-content">
             <br>
-            <label style="margin-left:10px;">Mes Prompts</label>
-            <div id="prompt-list">
-                <?php 
-                $stmt = $pdo->prepare("SELECT * FROM prompt_user WHERE user_id = ? ORDER BY date_creation DESC");
-                $stmt->execute([$_SESSION['user_id']]);
-                $user_prompts = $stmt->fetchAll();
-                
-                if (count($user_prompts) === 0): ?>
-                    <p style="color:#9a9a9a; margin-left:10px;">Aucun prompt enregistré.</p>
-                <?php else: ?>
-                    <?php foreach ($user_prompts as $prompt): ?>
-                        <button type="button" class="prompt-item" 
-                            data-prompt="<?= htmlspecialchars($prompt['contenu_prompt']) ?>"
-                            title="<?= htmlspecialchars($prompt['contenu_prompt']) ?>">
-                            <i class="bx bx-discussion"></i> <?= htmlspecialchars($prompt['nom_prompt']) ?>
-                        </button>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </div>
         </div>
-
-        <div class="settings-group">
-            <br>
-            <label style="margin-left:10px;">Historique des conversations</label>
-            <div id="history-list">
-                <?php if (count($histories) === 0): ?>
-                    <p style="color:#9a9a9a; margin-left:10px;">Aucune conversation enregistrée.</p>
-                <?php else: ?>
-                    <?php foreach ($histories as $history): 
-                        $msgs = json_decode($history['messages'], true);
-                        $lastMessage = end($msgs)['content'] ?? '';?>
-                        <div class="history-item-wrapper">
-                            <button type="button" class="history-item" data-id="<?= $history['id'] ?>">
-                                <strong><?= htmlspecialchars($history['profile_name'] ?? 'Profil inconnu') ?></strong><br>
-                                <span style="color:#9a9a9a; font-size:12px;"><?= htmlspecialchars(substr($lastMessage, 0, 50)) ?>...</span>
-                                <br>
-                                <span style="color:#9a9a9a; font-size:10px;"><?= date('d/m/Y', strtotime($history['created_at'])) ?></span>
-                            </button>
-                            <button type="button" class="delete-history-btn" data-id="<?= $history['id'] ?>" title="Supprimer">
-                                <i class='bx bx-trash'></i>
-                            </button>
+        
+        <div class="sidebar-footer">
+            <button class="new-chat-btn" onclick="location.href='../chatbot/settings.php'"><i class="bx bx-gear"></i>Settings</button><br>
+            <button class="new-chat-btn" onclick="location.href='../chatbot/backend/logout.php'"><i class="bx bx-arrow-out-right-square-half"></i>Déconnexion</button>
+        </div>
+    </aside>
+    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+    <button class="menu-btn" onclick="toggleSidebar()">
+        <span></span>
+        <span></span>
+        <span></span>
+    </button>
+    <div id="main-content">
+        <header>
+            <div class="header-content">
+                <div>
+                    <h1 class="header-title">Rasberry Cyber Sensors</h1>
+                    <div class="header-subtitle">Dashboard</div>
+                </div>
+                <div class="header-meta">
+                    <div class="last-update">Mis à jour: <?= date("d/m/Y H:i") ?></div>
+                    <div class="status-badge" style="height:50px;">
+                        <span class="status-dot"></span>
+                        <button class="analyze-btn" onclick="analyzeData()" style="background:none;border:none;font-weight:bold;color:white;cursor:pointer;" >
+                            Analyser mes données
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+        <div class="content-scrollable">
+            <div class="metrics-grid">
+                    <a href="dashboards/cpu.php" class="metric-card" style="text-decoration:none;">
+                        <div class="metric-header">
+                            <div>
+                                <div class="metric-label">Température CPU</div>
+                                <div class="metric-value"><?= $currentTemp ?>°C</div>
+                                <div class="metric-change">Moyenne: <?= $avgTemp ?>°C</div>
+                            </div>
+                            <div class="metric-icon blue">🌡️</div>
                         </div>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </div>
+                    </a>
+                    <div class="metric-card-bigger">
+            <div class="metric-header">
+                <div style="width: 100%;">
+                    <div class="metric-label">Information Raspberry</div>
+                    <?php 
+                    $lastEvent = !empty($events) ? end($events) : null;
+                    $sysInfo = $lastEvent ? json_decode($lastEvent['payload'], true) : [];
+                    ?>
+                    <div style="margin-top: 15px; display: flex; flex-direction: column; gap: 12px;">
+                        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border);">
+                            <span style="color: var(--text-secondary); font-size: 14px;">📟 OS :</span>
+                            <span style="color: var(--text-primary); font-weight: 500; font-size: 14px;">
+                                <?= isset($sysInfo['os']) ? $sysInfo['os'] : 'N/A' ?>
+                            </span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border);">
+                            <span style="color: var(--text-secondary); font-size: 14px;">🌐 IP :</span>
+                            <span style="color: var(--accent); font-weight: 600; font-size: 14px; font-family: 'IBM Plex Mono', monospace;">
+                                <?= isset($sysInfo['ip']) ? $sysInfo['ip'] : 'N/A' ?>
+                            </span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border);">
+                            <span style="color: var(--text-secondary); font-size: 14px;">🔒 Masque :</span>
+                            <span style="color: var(--text-primary); font-weight: 500; font-size: 14px; font-family: 'IBM Plex Mono', monospace;">
+                                <?= isset($sysInfo['netmask']) ? $sysInfo['netmask'] : 'N/A' ?>
+                            </span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border);">
+                            <span style="color: var(--text-secondary); font-size: 14px;">💻 Machine :</span>
+                            <span style="color: var(--text-primary); font-weight: 500; font-size: 14px;">
+                                <?= isset($sysInfo['hostname']) ? $sysInfo['hostname'] : 'N/A' ?>
+                            </span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border);">
+                            <span style="color: var(--text-secondary); font-size: 14px;">💾 RAM TOTALE :</span>
+                            <span style="color: var(--text-primary); font-weight: 500; font-size: 14px;">
+                                <?= isset($sysInfo['ram_total_mb']) 
+                                    ? $sysInfo['ram_total_mb'] . ' MB' 
+                                    : 'N/A' ?>
+                            </span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 8px 0;">
+                            <span style="color: var(--text-secondary); font-size: 14px;">🔌 Ports ouverts :</span>
+                            <span style="color: var(--color-warning); font-weight: 500; font-size: 12px; font-family: 'IBM Plex Mono', monospace; max-width: 60%; text-align: right; word-wrap: break-word;">
+                                <?= isset($sysInfo['open_ports']) ? $sysInfo['open_ports'] : 'N/A' ?>
+                            </span>
+                        </div>
+                    </div>
         </div>
-    </div>
-    
-    <div id="chat-area">
-        <div id="header">
-            <h1>IA CHATBOT</h1>
-        </div>
-
-        <div id="messages"></div>
-        <div id="input-area">
-            <div class="input-container">
-                <textarea id="user-input" rows="1" placeholder="Envoyez un message..."></textarea>
-                <button class="send-btn" onclick="sendMessage()">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
-                    </svg>
-                </button>
-            </div>
-        </div>
+        <div class="metric-icon blue" style="align-self: flex-start;">🖥️</div>
     </div>
 </div>
-<script>
-let chatHistory = JSON.parse(localStorage.getItem('chatHistory') || '[]');
-let selectedProfilePrompt = "";
-let selectedProfileId = null;
+                <a class="metric-card" href="dashboards/ssh.php" style="text-decoration:none;">
+                    <div class="metric-header">
+                        <div>
+                            <div class="metric-label">Tentatives SSH</div>
+                            <div class="metric-value"><?= $totalSSH ?></div>
+                            <div class="metric-change negative">Échecs de connexion</div>
+                        </div>
+                        <div class="metric-icon red">🔐</div>
+                    </div>
+                </a>
+                <a href="dashboards/alerts.php" style="text-decoration:none;" class="metric-card">
+                    <div class="metric-header">
+                        <div>
+                            <div class="metric-label">Alertes Faibles</div>
+                            <div class="metric-value"><?= $risks['LOW'] ?></div>
+                            <div class="metric-change positive"><?= round($risks['LOW']/$totalEvents*100) ?>% du total</div>
+                        </div>
+                        <div class="metric-icon green">✓</div>
+                    </div>
+                </a>
+                <a href="dashboards/ram.php" style="text-decoration:none;" class="metric-card">
+                    <div class="metric-label">Mémoire RAM</div>
+                    <div class="metric-value"><?= $currentRamUsed ?> / <?= $ramTotal ?> MB</div>
+                    <div class="metric-change">
+                        <?= $ramTotal > 0 ? round(($currentRamUsed/$ramTotal)*100) : 0 ?>% utilisée
+                    </div>
+                </a>
+                
+            </div>
+            <div class="content-grid">
+                <div class="chart-card">
+                    <div class="card-header">
+                        <div>
+                            <div class="card-title">Évolution de la température CPU</div>
+                            <div class="card-subtitle">30 derniers événements</div>
+                        </div>
+                    </div>
+                    <canvas id="cpuChart"></canvas>
+                </div>
 
-document.querySelectorAll('.history-item').forEach(item => {
-    item.addEventListener('click', async () => {
-        const historyId = item.dataset.id;
-        
-        try {
-            const res = await fetch(`backend/get.php?id=${historyId}`);
-            const data = await res.json();
-            
-            if (data.success) {
-                chatHistory = JSON.parse(data.messages);
-                localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
-                if (data.profile_id) {
-                    selectedProfileId = data.profile_id;
-                    document.querySelectorAll('.profile-item').forEach(p => {
-                        p.classList.remove('active');
-                        if (p.dataset.id == data.profile_id) {
-                            p.classList.add('active');
-                            selectedProfilePrompt = p.dataset.prompt;
-                            localStorage.setItem('selectedProfilePrompt', selectedProfilePrompt);
-                        }
-                    });
-                }
-                document.getElementById('messages').innerHTML = '';
-                initializeChat();
-                if (window.innerWidth <= 768) toggleMenu();
-            }
-        } catch (err) {
-            console.error('Erreur chargement historique:', err);
-        }
-    });
-});
-    
-
-// delete history
-document.querySelectorAll('.delete-history-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        
-        if (!confirm('Voulez-vous vraiment supprimer cette conversation ?')) {
-            return;
-        }
-        
-        const historyId = btn.dataset.id;
-        const formData = new FormData();
-        formData.append('id', historyId);
-        
-        const xhr = new XMLHttpRequest();
-        xhr.open('POST', 'backend/delete.php', true);
-        
-        xhr.onload = function() {
-            if (xhr.status === 200) {
-                try {
-                    const data = JSON.parse(xhr.responseText);
-                    if (data.success) {
-                        btn.closest('.history-item-wrapper').remove();
-                        const historyList = document.getElementById('history-list');
-                        if (historyList.querySelectorAll('.history-item-wrapper').length === 0) {
-                            historyList.innerHTML = '<p style="color:#9a9a9a; margin-left:10px;">Aucune conversation enregistrée.</p>';
-                        }
-                        console.log('Conversation supprimée');
-                    } else {
-                        alert('Erreur: ' + data.error);
-                    }
-                } catch (err) {
-                    console.error('Erreur parsing:', err);
-                }
-            }
-        };
-        
-        xhr.send(formData);
-    });
-});
-    
-
-// Profils IA
-document.querySelectorAll('.profile-item').forEach(item => {
-    item.addEventListener('click', () => {
-        document.querySelectorAll('.profile-item').forEach(i => i.classList.remove('active'));
-        item.classList.add('active');
-
-        selectedProfilePrompt = item.dataset.prompt;
-        selectedProfileId = item.dataset.id; // Pour la BDD
-        localStorage.setItem('selectedProfilePrompt', selectedProfilePrompt);
-    });
-});
-
-const savedPrompt = localStorage.getItem('selectedProfilePrompt');
-if (savedPrompt) {
-    selectedProfilePrompt = savedPrompt;
-    document.querySelectorAll('.profile-item').forEach(item => {
-        if (item.dataset.prompt === savedPrompt) {
-            item.classList.add('active');
-            selectedProfileId = item.dataset.id;
-        }
-    });
-}
-// initialize chat
-function initializeChat() {
-    const messagesDiv = document.getElementById('messages');
-    if (!messagesDiv) return;
-
-    if (chatHistory.length === 0) {
-        showEmptyState();
-    } else {
-        chatHistory.forEach(m => {
-            const avatarHTML = m.role === 'user'
-                ? "<i class='bx bx-user-circle'></i>"
-                : "<i class='bx bx-robot'></i>";
-            addMessage(m.role, m.content, avatarHTML, false, true);
-        });
-    }
-}
-function showEmptyState() {
-    const messagesDiv = document.getElementById('messages');
-    if (!messagesDiv) return;
-    messagesDiv.innerHTML = `
-        <div class="empty-state">
-            <h2>Comment puis-je vous aider ?</h2>
-            <p>Commencez une conversation en tapant un message ci-dessous.</p>
+                <div class="summary-card">
+                    <div class="card-header">
+                        <div>
+                            <div class="card-title">Vue d'ensemble</div>
+                            <div class="card-subtitle">Statistiques globales</div>
+                        </div>
+                    </div>
+                    <div class="summary-items">
+                        <div class="summary-item">
+                            <span class="summary-item-label">Total événements</span>
+                            <span class="summary-item-value"><?= $totalEvents ?></span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-item-label">Alertes moyennes</span>
+                            <span class="summary-item-value warning"><?= $risks['MEDIUM'] ?></span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-item-label">Température max</span>
+                            <span class="summary-item-value danger"><?= max($cpuTemps) ?>°C</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-item-label">Température min</span>
+                            <span class="summary-item-value success"><?= min($cpuTemps) ?>°C</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="events-card">
+    <div class="card-header">
+        <div>
+            <div class="card-title">Journal des événements</div>
+            <div class="card-subtitle">Historique des 30 derniers événements</div>
         </div>
-    `;
-}
+    </div>
 
-// Reset conv
-const resetBtn = document.getElementById('reset-btn');
-if (resetBtn) {
-    resetBtn.addEventListener('click', () => {
-            chatHistory = [];
-            localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
-            showEmptyState();
-            if (window.innerWidth <= 768) toggleMenu();
-        }
-    );
-}
+    <div class="table-container">
+        <table class="events-table">
+            <thead>
+                <tr>
+                    <th>Heure</th>
+                    <th>Niveau de risque</th>
+                    <th>Température</th>
+                    <th>Fréq CPU</th>
+                    <th>RAM</th>
+                    <th>Échecs SSH</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach (array_reverse($events) as $e):
+                    $p = json_decode($e['payload'], true);
+                    $riskClass = strtolower($p['risk']);
 
+                    $ramPercent = isset($p['ram_used_mb'], $p['ram_total_mb']) && $p['ram_total_mb'] > 0
+                        ? round(($p['ram_used_mb'] / $p['ram_total_mb']) * 100)
+                        : null;
+                ?>
+                <tr>
+                    <td class="event-time">
+                        <?= date("d/m/Y H:i:s", $e['ts']) ?>
+                    </td>
 
-async function sendMessage() {
-    const input = document.getElementById('user-input');
-    if (!input) return;
+                    <td>
+                        <span class="risk-badge risk-<?= $riskClass ?>">
+                            <?= $p['risk'] ?>
+                        </span>
+                    </td>
 
-    const msg = input.value.trim();
-    if (!msg) return;
+                    <td class="event-temp">
+                        <?= $p['cpu_temp_c'] ?>°C
+                    </td>
 
-    if (window.innerWidth <= 768 && sidebar.classList.contains('active')) toggleMenu();
+                    <td>
+                        <?= isset($p['cpu_freq_mhz']) ? round($p['cpu_freq_mhz']) . ' MHz' : '—' ?>
+                    </td>
 
-    const emptyState = document.querySelector('.empty-state');
-    if (emptyState) emptyState.remove();
+                    <td>
+                        <?php if ($ramPercent !== null): ?>
+                            <?= $p['ram_used_mb'] ?>/<?= $p['ram_total_mb'] ?> MB
+                            <span style="font-size:12px;color:<?= $ramPercent > 90 ? '#ef5350' : ($ramPercent > 75 ? '#ffa726' : '#3fb980') ?>">
+                                (<?= $ramPercent ?>%)
+                            </span>
+                        <?php else: ?>
+                            —
+                        <?php endif; ?>
+                    </td>
 
-    const userAvatarHTML = "<i class='bx bx-user-circle'></i>";
-    const botAvatarHTML = "<i class='bx bx-robot'></i>";
+                    <td class="event-ssh">
+                        <?= $p['ssh_failed_count'] ?>
+                    </td>
 
-    addMessage('user', msg, userAvatarHTML, false, true);
-    chatHistory.push({ role: 'user', content: msg });
-    localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+                    <td>
+                        <?= $p['risk'] === 'HIGH' ? '⚠️ Attention requise' : '✓ Normal' ?>
+                        <br>
 
-    input.value = '';
-    input.style.height = 'auto';
+                        <a href="../chatbot/chatbot.php?q=<?= urlencode(
+                            'Analyse ces données de sécurité : ' .
+                            'CPU ' . $p['cpu_temp_c'] . '°C, ' .
+                            (isset($p['cpu_freq_mhz']) ? 'Fréq ' . round($p['cpu_freq_mhz']) . ' MHz, ' : '') .
+                            (isset($p['ram_used_mb'], $p['ram_total_mb']) ? 'RAM ' . $p['ram_used_mb'] . '/' . $p['ram_total_mb'] . ' MB (' . $ramPercent . '%), ' : '') .
+                            'SSH échoués ' . $p['ssh_failed_count'] . ', ' .
+                            'Risque ' . $p['risk']
+                        ) ?>"
+                        style="display:inline-block;margin-top:5px;padding:3px 8px;background:var(--accent);color:white;border-radius:4px;text-decoration:none;font-size:12px;">
+                            <i class='bx bx-brain'></i> Analyser avec l'IA
+                        </a>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
 
-    const tempContent = addMessage('bot', '', botAvatarHTML, true, true);
+            <br>
+            <a href="history.php" style="color:var(--accent);text-decoration:none;font-weight:500;">
+                <i class='bx bx-right-arrow-alt'></i> Voir tout l'historique
+            </a>
+        </div>
+    </div>
 
-    try {
-        const payload = [];
-        if (selectedProfilePrompt) {
-            payload.push({ role: 'system', content: selectedProfilePrompt });
-        }
-        chatHistory.forEach(m => payload.push({ role: m.role, content: m.content }));
-        const res = await fetch('http://localhost:11434/v1/chat/completions', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ model: 'gemma3', messages: payload })
-        });
-        const data = await res.json();
-        const botReply = data.choices[0].message.content;
-        await typeMessage(tempContent, botReply);
-        chatHistory.push({ role: 'bot', content: botReply });
-        localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
-        saveChatToDB(chatHistory, selectedProfileId);
-    } catch (err) {
-        console.error('Erreur envoi message:', err);
-        tempContent.innerHTML = '⚠️ Erreur serveur IA';
-    }
-}
-
-function saveChatToDB(chatHistory, profileId) {
-    $.ajax({
-        url: 'backend/process.php',
-        type: 'POST',
-        data: {
-            profile_id: profileId || '',
-            messages: JSON.stringify(chatHistory)
-        },
-        success: function(data) {
-            console.log('SAVE_CHAT response:', data);
-        },
-        error: function(xhr, status, error) {
-            console.error('SAVE_CHAT error:', error);
-        }
-    });
-}
-function addMessage(role, text, avatar = null, isTyping = false, isHTML = false) {
-    const messagesDiv = document.getElementById('messages');
-    if (!messagesDiv) return;
-
-    const wrapper = document.createElement('div');
-    wrapper.classList.add('message-wrapper', role === 'user' ? 'user-wrapper' : 'bot-wrapper');
-
-    const msgDiv = document.createElement('div');
-    msgDiv.classList.add('message');
-
-    const avatarDiv = document.createElement('div');
-    avatarDiv.classList.add('avatar', role === 'user' ? 'user-avatar' : 'bot-avatar');
-    if (avatar) {
-        isHTML ? avatarDiv.innerHTML = avatar : avatarDiv.textContent = avatar;
-    }
-
-    msgDiv.appendChild(avatarDiv);
-
-    const contentDiv = document.createElement('div');
-    contentDiv.classList.add('message-content');
-
-    if (isTyping) {
-        contentDiv.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
-    } else {
-        contentDiv.textContent = text;
-    }
-
-    msgDiv.appendChild(contentDiv);
-    wrapper.appendChild(msgDiv);
-    messagesDiv.appendChild(wrapper);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-
-    return contentDiv;
-}
-async function typeMessage(contentDiv, text) {
-    contentDiv.textContent = '';
-    for (let c of text) {
-        contentDiv.textContent += c;
-        await new Promise(r => setTimeout(r, 15));
-        const messagesDiv = document.getElementById('messages');
-        if (messagesDiv) messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    }
-}
-const userInput = document.getElementById('user-input');
-if (userInput) {
-    userInput.addEventListener('input', function() {
-        this.style.height = 'auto';
-        this.style.height = Math.min(this.scrollHeight, 200) + 'px';
-    });
-
-    userInput.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') {
-            if (e.shiftKey) return;
-            e.preventDefault();
-            sendMessage();
-        }
-    });
-}
-const menuToggle = document.getElementById('menu-toggle');
-const sidebar = document.getElementById('sidebar');
-const sidebarOverlay = document.getElementById('sidebar-overlay');
-
-if (menuToggle && sidebar && sidebarOverlay) {
-    menuToggle.addEventListener('click', toggleMenu);
-    sidebarOverlay.addEventListener('click', toggleMenu);
-}
-
-function toggleMenu() {
-    menuToggle.classList.toggle('active');
-    sidebar.classList.toggle('active');
-    sidebarOverlay.classList.toggle('active');
-}
-initializeChat();
-</script>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const promptItems = document.querySelectorAll('.prompt-item');
-    const userInput = document.getElementById('user-input');
+        </div><!-- fin content-scrollable -->
+        
+    </div><!-- fin main-content -->
     
-    promptItems.forEach(item => {
-        item.addEventListener('click', function() {
-            const promptContent = this.getAttribute('data-prompt');
-            userInput.value = promptContent;
-            userInput.focus();
-            userInput.style.height = 'auto';
-            userInput.style.height = userInput.scrollHeight + 'px';
-        });
+</div><!-- fin app-container -->
+
+<script>
+let cpuChart = null;
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.querySelector('.sidebar-overlay');
+    const menuBtn = document.querySelector('.menu-btn');
+    
+    sidebar.classList.toggle('active');
+    overlay.classList.toggle('active');
+    menuBtn.classList.toggle('active');
+}
+function selectProfile(id) {
+    console.log('Profil sélectionné:', id);
+}
+
+function loadHistory(id) {
+    console.log('Charger historique:', id);
+    window.location.href = '../chatbot/index.php?history=' + id;
+}
+
+function deleteHistory(id) {
+    if (confirm('Supprimer cet historique ?')) {
+        console.log('Supprimer:', id);
+        // Ajouter votre logique de suppression ici
+    }
+}
+
+function usePrompt(prompt) {
+    const encoded = encodeURIComponent(prompt);
+    window.location.href = '../chatbot/index.php?q=' + encoded;
+}
+
+// Initialisation du graphique
+function initChart() {
+    const canvas = document.getElementById('cpuChart');
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+
+    const temps = <?= json_encode($cpuTemps) ?>;
+    const labels = <?= json_encode($labels) ?>;
+
+    const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+    gradient.addColorStop(0, 'rgba(74, 158, 255, 0.15)');
+    gradient.addColorStop(1, 'rgba(74, 158, 255, 0.02)');
+
+    cpuChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Température CPU',
+                data: temps,
+                borderColor: '#4a9eff',
+                backgroundColor: gradient,
+                borderWidth: 2.5,
+                fill: true,
+                tension: 0.3,
+                pointBackgroundColor: '#2d7dd2',
+                pointBorderColor: '#ffffff',
+                pointBorderWidth: 2,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                pointHoverBorderWidth: 3
+            }]
+        },
+        options: {
+            animation: false,
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { 
+                    grid: { display: false, drawBorder: false }, 
+                    ticks: { color: '#8792a2' } 
+                },
+                y: { 
+                    min: Math.min(...temps) - 5, 
+                    max: Math.max(...temps) + 5, 
+                    ticks: { color: '#8792a2' }, 
+                    grid: { drawBorder: false, color: 'rgba(255,255,255,0.05)' } 
+                }
+            }
+        }
     });
+}
+
+// Mise à jour des données
+async function updateChart() {
+    try {
+        const res = await fetch('backend/get_latest_events.php');
+        const data = await res.json();
+        cpuChart.data.labels = data.labels;
+        cpuChart.data.datasets[0].data = data.temps;
+        cpuChart.update();
+    } catch(e) {
+        console.error('Erreur update chart:', e);
+    }
+}
+function analyzeData() {
+    const events = <?= json_encode($events) ?>;
+    if (!events.length) return;
+    const lastEvent = events[events.length - 1];
+    const p = JSON.parse(lastEvent.payload);
+
+    let message = "Analyse ces données de sécurité et indique si une action est nécessaire :\n\n";
+
+    message += `• CPU: ${p.cpu_temp_c}°C`;
+
+    if (p.cpu_freq_mhz !== undefined) {
+        message += ` | Fréq CPU: ${Math.round(p.cpu_freq_mhz)} MHz`;
+    }
+
+    if (p.ram_used_mb !== undefined && p.ram_total_mb !== undefined) {
+        const percent = Math.round((p.ram_used_mb / p.ram_total_mb) * 100);
+        message += ` | RAM: ${p.ram_used_mb}/${p.ram_total_mb} MB (${percent}%)`;
+    }
+    message += ` | SSH échoués: ${p.ssh_failed_count}`;
+    message += ` | Risque: ${p.risk}`;
+
+    const encoded = encodeURIComponent(message);
+    window.location.href = `../chatbot/chatbot.php?auto=1&q=${encoded}`;
+}
+document.addEventListener('DOMContentLoaded', function() {
+    initChart();
+    setInterval(updateChart, 10);
 });
+setInterval(() => location.reload(), 30000);
 </script>
+
 </body>
 </html>
