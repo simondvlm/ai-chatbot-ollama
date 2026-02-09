@@ -146,7 +146,7 @@ $pdo = new PDO($dsn, $user, $pass, $options);
 ## Screenshots
 
 **Home / Chat interface**  
-![Home](assets/Screenshots/home.png)
+![Home](assets/Screenshots/dashboard.png)
 
 **Login Page**  
 ![Login](assets/Screenshots/login.png)
@@ -171,6 +171,7 @@ $pdo = new PDO($dsn, $user, $pass, $options);
 
 **Settings Part 2**  
 ![Settings Part 2](assets/Screenshots/setting-part2.png)
+
 
 
 
