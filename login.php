@@ -304,56 +304,6 @@ button svg {
     color: var(--text-muted);
     font-size: 13px;
 }
-.features {
-    margin-top: 32px;
-    padding-top: 24px;
-    border-top: 1px solid var(--border);
-}
-
-.features h3 {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text-secondary);
-    margin-bottom: 16px;
-    text-align: center;
-}
-
-.features-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-}
-
-.feature-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px;
-    background: var(--bg-secondary);
-    border-radius: 8px;
-    font-size: 12px;
-    color: var(--text-secondary);
-}
-
-.feature-icon {
-    font-size: 16px;
-}
-.footer {
-    text-align: center;
-    margin-top: 24px;
-    font-size: 12px;
-    color: var(--text-muted);
-}
-
-.footer a {
-    color: var(--accent);
-    text-decoration: none;
-    transition: color 0.2s;
-}
-
-.footer a:hover {
-    color: var(--accent-hover);
-}
 @media (max-width: 480px) {
     body {
         padding: 10px;
@@ -567,27 +517,6 @@ button svg {
                         Créer mon compte
                     </button>
                 </form>
-            </div>
-        </div>
-        <div class="features">
-            <h3>Pourquoi choisir Chat Ollama ?</h3>
-            <div class="features-grid">
-                <div class="feature-item">
-                    <span class="feature-icon">🔒</span>
-                    <span>100% Privé</span>
-                </div>
-                <div class="feature-item">
-                    <span class="feature-icon">⚡</span>
-                    <span>Rapide & Local</span>
-                </div>
-                <div class="feature-item">
-                    <span class="feature-icon">🎨</span>
-                    <span>Personnalisable</span>
-                </div>
-                <div class="feature-item">
-                    <span class="feature-icon">💾</span>
-                    <span>Historique sauvegardé</span>
-                </div>
             </div>
         </div>
     </div>
