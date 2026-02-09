@@ -9,12 +9,14 @@ if (!isset($_SESSION['user_id'])) {
 
 $user_id = $_SESSION['user_id'];
 $message = "";
-$messageType = "success";
+$messageType = "success"; // success ou error
+
+// Récupérer infos utilisateur
 $stmt = $pdo->prepare("SELECT username, email, avatar, theme FROM users WHERE id = ?");
 $stmt->execute([$user_id]);
 $user = $stmt->fetch();
 
-// upload avatar
+//  UPLOAD AVATAR 
 if (isset($_POST['update_avatar'])) {
     if (isset($_FILES['avatar_file']) && $_FILES['avatar_file']['error'] === 0) {
         $file = $_FILES['avatar_file'];
@@ -44,7 +46,7 @@ if (isset($_POST['update_avatar'])) {
     }
 }
 
-// change password
+//  CHANGER MOT DE PASSE 
 if (isset($_POST['update_password'])) {
     $current = $_POST['current_password'];
     $new = $_POST['new_password'];
@@ -64,7 +66,32 @@ if (isset($_POST['update_password'])) {
     }
 }
 
-// delete account
+//  CHANGER PHRASE
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_system'])) {
+    $newSystem = $_POST['system_sentences'] ?? '';
+    $stmt = $pdo->prepare("UPDATE users SET system_sentences = ? WHERE id = ?");
+    $stmt->execute([$newSystem, $_SESSION['user_id']]);
+    $message = "✓ Phrase système mise à jour !";
+    $user['system_sentences'] = $newSystem;
+}
+if (isset($_POST['update_theme'])) {
+    $newTheme = $_POST['theme'];
+    
+    if (in_array($newTheme, ['dark', 'light'])) {
+        $stmt = $pdo->prepare("UPDATE users SET theme = ? WHERE id = ?");
+        $stmt->execute([$newTheme, $user_id]);
+        $message = "✓ Thème modifié avec succès !";
+        $user['theme'] = $newTheme;
+        
+        // Recharger la page pour appliquer le nouveau thème
+        header("Location: settings.php");
+        exit();
+    } else {
+        $message = "⚠ Thème invalide";
+        $messageType = "error";
+    }
+}
+//  SUPPRIMER COMPTE
 if (isset($_POST['delete_account'])) {
     $stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
     $stmt->execute([$user_id]);
@@ -136,6 +163,7 @@ body {
     font-size: 14px;
 }
 
+/* Message notifications */
 .message {
     padding: 14px 18px;
     border-radius: 10px;
@@ -205,6 +233,8 @@ body {
 .user-details .email {
     color: var(--text-muted);
 }
+
+/* Settings Sections */
 .settings-section {
     background: var(--bg-secondary);
     border: 1px solid var(--border);
@@ -322,6 +352,8 @@ input[type="file"]::file-selector-button:hover {
     background: var(--bg-tertiary);
     border-color: var(--accent);
 }
+
+/* Buttons */
 button,
 .button {
     width: 100%;
@@ -383,6 +415,7 @@ button:active,
     background: rgba(127, 29, 29, 0.2);
 }
 
+/* Back Link */
 .back-link {
     display: inline-flex;
     align-items: center;
@@ -403,7 +436,6 @@ button:active,
     width: 16px;
     height: 16px;
 }
-
 .avatar-options {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -452,6 +484,8 @@ button:active,
             <?= $message ?>
         </div>
     <?php endif; ?>
+
+    <!-- USER INFO -->
     <div class="user-info">
         <img src="<?= htmlspecialchars($user['avatar']) ?>" alt="avatar" class="avatar-display" onerror="this.src='https://ui-avatars.com/api/?name=<?= urlencode($user['username']) ?>&background=10a37f&color=fff'">
         <div class="user-details">
@@ -459,6 +493,8 @@ button:active,
             <p class="email"><?= htmlspecialchars($user['email']) ?></p>
         </div>
     </div>
+
+    <!-- AVATAR SECTION -->
     <div class="settings-section">
         <div class="section-header">
             <div class="section-icon">🎨</div>
@@ -529,6 +565,43 @@ button:active,
     </div>
     <div class="settings-section">
         <div class="section-header">
+            <div class="section-icon">🌓</div>
+            <div class="section-title">
+                <h3>Thème</h3>
+                <p>Choisissez votre mode d'affichage préféré</p>
+            </div>
+        </div>
+        
+        <form method="POST">
+            <div class="form-group">
+                <label>Mode d'affichage</label>
+                <select name="theme" required>
+                    <option value="dark" <?= ($user['theme'] ?? 'dark') === 'dark' ? 'selected' : '' ?>>🌙 Mode Sombre</option>
+                    <option value="light" <?= ($user['theme'] ?? 'dark') === 'light' ? 'selected' : '' ?>>☀️ Mode Clair</option>
+                </select>
+                <span class="form-hint">Le thème sera appliqué immédiatement après enregistrement</span>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <button name="update_theme" type="submit">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="5"/>
+                    <line x1="12" y1="1" x2="12" y2="3"/>
+                    <line x1="12" y1="21" x2="12" y2="23"/>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                    <line x1="1" y1="12" x2="3" y2="12"/>
+                    <line x1="21" y1="12" x2="23" y2="12"/>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                </svg>
+                Enregistrer le thème
+            </button>
+        </form>
+    </div>
+    <div class="settings-section">
+        <div class="section-header">
             <div class="section-icon">👤</div>
             <div class="section-title">
                 <h3>Profils</h3>
@@ -589,7 +662,7 @@ button:active,
         </form>
     </div>
 
-    <a href="/chatbot" class="back-link">
+    <a href="/chatbot/chatbot.php" class="back-link">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="19" y1="12" x2="5" y2="12"/>
             <polyline points="12 19 5 12 12 5"/>
@@ -597,6 +670,5 @@ button:active,
         Retour au chat
     </a>
 </div>
-
 </body>
 </html>
