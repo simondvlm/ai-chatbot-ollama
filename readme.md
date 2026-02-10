@@ -176,7 +176,7 @@ $pdo = new PDO($dsn, $user, $pass, $options);
 ![Bot Typing](assets/Screenshots/typing.png)
 
 **Bot Response**  
-![Bot Response](assets/Screenshots/response.png)
+![Bot Response](assets/Screenshots/response_chatbot.png)
 
 **Profiles**  
 ![Profiles](assets/Screenshots/profiles.png)
@@ -189,6 +189,7 @@ $pdo = new PDO($dsn, $user, $pass, $options);
 
 **Settings Part 2**  
 ![Settings Part 2](assets/Screenshots/setting-part2.png)
+
 
 
 
