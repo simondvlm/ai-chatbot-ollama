@@ -148,17 +148,35 @@ $pdo = new PDO($dsn, $user, $pass, $options);
 **Home / Dashboard**  
 ![Home](assets/Screenshots/dashboard.png)
 
+**Dasboard CPU part1**
+![CPU1](assets/Screenshots/dashboard_cpu1.png)
+
+**Dasboard CPU part2**
+![CPU2](assets/Screenshots/dashboard_cpu2.png)
+
+**Dasboard SSH**
+![SSH](assets/Screenshots/dashboard_ssh.png)
+
+**Dasboard ALERTS**
+![ALERTS](assets/Screenshots/dashboard_alerts.png)
+
+**Dasboard RAM**
+![CPU1](assets/Screenshots/dashboard_ram.png)
+
 **Login Page**  
 ![Login](assets/Screenshots/login.png)
 
 **Signup Page**  
 ![Signup](assets/Screenshots/signup.png)
 
+**Chatbot**
+![chatbot](assets/Screenshots/chatbot.png)
+
 **Bot Typing Indicator**  
-![Bot Typing](assets/Screenshots/bot-typing.png)
+![Bot Typing](assets/Screenshots/typing.png)
 
 **Bot Response**  
-![Bot Response](assets/Screenshots/bot-response.png)
+![Bot Response](assets/Screenshots/response.png)
 
 **Profiles**  
 ![Profiles](assets/Screenshots/profiles.png)
@@ -171,6 +189,7 @@ $pdo = new PDO($dsn, $user, $pass, $options);
 
 **Settings Part 2**  
 ![Settings Part 2](assets/Screenshots/setting-part2.png)
+
 
 
 
