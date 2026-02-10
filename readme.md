@@ -88,17 +88,9 @@ $pdo = new PDO($dsn, $user, $pass, $options);
 
 ```
 ├── 📁 assets
-│   ├── 📁 Screenshots
-│   │   ├── 🖼️ bot-response.png
-│   │   ├── 🖼️ bot-typing.png
-│   │   ├── 🖼️ home.png
-│   │   ├── 🖼️ login.png
-│   │   ├── 🖼️ profiles.png
-│   │   ├── 🖼️ prompts.png
-│   │   ├── 🖼️ setting-part1.png
-│   │   ├── 🖼️ setting-part2.png
-│   │   └── 🖼️ signup.png
-│   └── 🎨 style.css
+│   └── 🎨 code.css
+|   └── 🎨 style-dark.css
+|   └── 🎨 style-light.css
 ├── 📁 avatars
 │   └── 🖼️ default.webp
 ├── 📁 backend
@@ -189,6 +181,7 @@ $pdo = new PDO($dsn, $user, $pass, $options);
 
 **Settings Part 2**  
 ![Settings Part 2](assets/Screenshots/setting-part2.png)
+
 
 
 
