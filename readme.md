@@ -99,6 +99,11 @@ $pdo = new PDO($dsn, $user, $pass, $options);
 │   ├── 🐘 get.php
 │   ├── 🐘 logout.php
 │   └── 🐘 process.php
+├── 📁 dashboards
+│   ├── 🐘 alerts.php
+│   ├── 🐘 cpu.php
+│   └── 🐘 ram.php
+│   ├── 🐘 ssh.php
 ├── 📁 error
 │   ├── 🐘 403.php
 │   ├── 🐘 404.php
@@ -181,6 +186,7 @@ $pdo = new PDO($dsn, $user, $pass, $options);
 
 **Settings Part 2**  
 ![Settings Part 2](assets/Screenshots/setting-part2.png)
+
 
 
 
