@@ -140,6 +140,30 @@ $pdo = new PDO($dsn, $user, $pass, $options);
 
 - **Customize your system prompts and AI profiles in Settings.**
 
+## Dashboards
+
+The project includes a **system monitoring dashboard** accessible from the interface, designed to give real-time technical insights alongside the AI chatbot.
+
+### Available Dashboards
+
+All dashboard files are located in the `dashboards/` directory.
+
+- **CPU Dashboard (`cpu.php`)**
+  - Displays CPU usage and performance metrics.
+  - Useful for monitoring system load while running the Ollama model.
+
+- **RAM Dashboard (`ram.php`)**
+  - Shows memory usage and availability.
+  - Helps track RAM consumption, especially important for 8GB AI models.
+
+- **SSH Dashboard (`ssh.php`)**
+  - Displays SSH-related information and connections.
+  - Useful for server access monitoring and security awareness.
+
+- **Alerts Dashboard (`alerts.php`)**
+  - Centralizes system alerts and warnings.
+  - Designed to highlight potential issues or abnormal behavior.
+
 ## Screenshots
 
 **Home / Dashboard**  
@@ -186,6 +210,7 @@ $pdo = new PDO($dsn, $user, $pass, $options);
 
 **Settings Part 2**  
 ![Settings Part 2](assets/Screenshots/setting-part2.png)
+
 
 
 
