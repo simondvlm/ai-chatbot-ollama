@@ -23,7 +23,7 @@ If you want to host the chatbot on your own computer and make it accessible over
 ```bash
 sh server/start_server.sh
 ```
-4.  To connect the frontend to your locally hosted Ollama AI server via ngrok, update the fetch URL in `index.php` at line 390:  
+4.  To connect the frontend to your locally hosted Ollama AI server via ngrok, update the fetch URL in `index.php` at line 294:  
 ```const res = await fetch('http://localhost:11434/v1/chat/completions', {``` 
 - with your ngrok public URL, for example:
 ```const res = await fetch('url-from-ngrok/chat', {```
@@ -210,6 +210,7 @@ All dashboard files are located in the `dashboards/` directory.
 
 **Settings Part 2**  
 ![Settings Part 2](assets/Screenshots/setting-part2.png)
+
 
 
 
