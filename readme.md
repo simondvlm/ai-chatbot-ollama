@@ -56,7 +56,7 @@ npm install
 
 ```bash
 git clone https://github.com/simondvlm/ai-chatbot-ollama.git
-cd ai-chatbot
+cd ai-chatbot-ollama
 ```
 
 2. Configure your database in backend/config.php:
@@ -78,7 +78,7 @@ $pdo = new PDO($dsn, $user, $pass, $options);
 ?>
 ```
 
-3. Start your Ollama AI server locally on port 11434.
+3. Start your Ollama AI server locally on port 11434. (It runs automatically on this port when your PC starts.)
 
 4. Open index.php in your browser.
 
@@ -210,6 +210,7 @@ All dashboard files are located in the `dashboards/` directory.
 
 **Settings Part 2**  
 ![Settings Part 2](assets/Screenshots/setting-part2.png)
+
 
 
 
