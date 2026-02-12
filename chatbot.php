@@ -56,8 +56,8 @@ $systemSentences = $user['system_sentences'] ?? '';
     <div id="sidebar">
         <div class="sidebar-header">
             <h2>Navigation</h2>
-            <form action="../chatbot"><button class="new-chat-btn"><i class="bx bx-dashboard"></i>  Dashboard</button></form><br>
-            <button class="new-chat-btn" onclick="location.href='../chatbot/chatbot.php'"><i class="bx bx-message-circle-dots-2"></i>Chatbot</button><br>
+            <form action="../ai-chatbot-ollama"><button class="new-chat-btn"><i class="bx bx-dashboard"></i>  Dashboard</button></form><br>
+            <button class="new-chat-btn" onclick="location.href='../ai-chatbot-ollama/chatbot.php'"><i class="bx bx-message-circle-dots-2"></i>Chatbot</button><br>
             <button class="new-chat-btn" id="reset-btn" onclick="window.location.href='../ai-chatbot-ollama/chatbot.php'"><i class="bx bx-plus"></i>Nouvelle conversation</button><br>
         </div><br>
         
