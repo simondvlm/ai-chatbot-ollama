@@ -108,8 +108,8 @@ $histories = $stmtHistory->fetchAll(PDO::FETCH_ASSOC);
     <aside id="sidebar">
         <div class="sidebar-header">
             <h2>Navigation</h2>
-            <button class="new-chat-btn" onclick="location.href='../chatbot/index.php'"><i class="bx bx-dashboard"></i>Dashboard</button><br>
-            <button class="new-chat-btn" onclick="location.href='../chatbot/chatbot.php'"><i class="bx bx-message-circle-dots-2"></i>Chatbot</button>
+            <button class="new-chat-btn" onclick="location.href='../ai-chatbot-ollama/index.php'"><i class="bx bx-dashboard"></i>Dashboard</button><br>
+            <button class="new-chat-btn" onclick="location.href='../ai-chatbot-ollama/chatbot.php'"><i class="bx bx-message-circle-dots-2"></i>Chatbot</button>
         </div>
         
         <div class="sidebar-content">
@@ -117,8 +117,8 @@ $histories = $stmtHistory->fetchAll(PDO::FETCH_ASSOC);
         </div>
         
         <div class="sidebar-footer">
-            <button class="new-chat-btn" onclick="location.href='../chatbot/settings.php'"><i class="bx bx-gear"></i>Settings</button><br>
-            <button class="new-chat-btn" onclick="location.href='../chatbot/backend/logout.php'"><i class="bx bx-arrow-out-right-square-half"></i>Déconnexion</button>
+            <button class="new-chat-btn" onclick="location.href='../ai-chatbot-ollama/settings.php'"><i class="bx bx-gear"></i>Settings</button><br>
+            <button class="new-chat-btn" onclick="location.href='../ai-chatbot-ollama/backend/logout.php'"><i class="bx bx-arrow-out-right-square-half"></i>Déconnexion</button>
         </div>
     </aside>
     <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
