@@ -58,7 +58,7 @@ $systemSentences = $user['system_sentences'] ?? '';
             <h2>Navigation</h2>
             <form action="../chatbot"><button class="new-chat-btn"><i class="bx bx-dashboard"></i>  Dashboard</button></form><br>
             <button class="new-chat-btn" onclick="location.href='../chatbot/chatbot.php'"><i class="bx bx-message-circle-dots-2"></i>Chatbot</button><br>
-            <button class="new-chat-btn" id="reset-btn" onclick="window.location.href='../chatbot/chatbot.php'"><i class="bx bx-plus"></i>Nouvelle conversation</button><br>
+            <button class="new-chat-btn" id="reset-btn" onclick="window.location.href='../ai-chatbot-ollama/chatbot.php'"><i class="bx bx-plus"></i>Nouvelle conversation</button><br>
         </div><br>
         
         <div class="settings-group">
@@ -103,14 +103,14 @@ $systemSentences = $user['system_sentences'] ?? '';
         <div class="settings-group">
             <br>
             <label style="margin-left:10px;">Historique</label>
-            <button onclick="location.href='../chatbot/history_chatbot.php'" style="width:85%;margin-left:20px;" class="new-chat-btn">Voir l'historique</button>
+            <button onclick="location.href='../ai-chatbot-ollama/history_chatbot.php'" style="width:85%;margin-left:20px;" class="new-chat-btn">Voir l'historique</button>
         </div>
         <div class="sidebar-content">
             <br>
         </div>
         <div class="sidebar-footer">
-            <button class="new-chat-btn" onclick="location.href='../chatbot/settings.php'"><i class="bx bx-gear"></i>Settings</button><br>
-            <button class="new-chat-btn" onclick="location.href='../chatbot/backend/logout.php'"><i class="bx bx-arrow-out-right-square-half"></i>Déconnexion</button>
+            <button class="new-chat-btn" onclick="location.href='../ai-chatbot-ollama/settings.php'"><i class="bx bx-gear"></i>Settings</button><br>
+            <button class="new-chat-btn" onclick="location.href='../ai-chatbot-ollama/backend/logout.php'"><i class="bx bx-arrow-out-right-square-half"></i>Déconnexion</button>
         </div>
     </div>
     
