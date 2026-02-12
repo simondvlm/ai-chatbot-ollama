@@ -450,7 +450,7 @@ textarea {
         <?php endif; ?>
 
         <div class="header-actions">
-            <a href="/chatbot" class="back-link">← Retour au chat</a>
+            <a href="/ai-chatbot-ollama" class="back-link">← Retour au chat</a>
             <button class="btn-add" onclick="openModal('add')">
                 <span>➕</span> Nouveau prompt
             </button>
