@@ -25,7 +25,7 @@ $histories = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Historique - IA CHATBOT</title>
-<link rel="stylesheet" href="assets/style-<?= htmlspecialchars($theme) ?>.css">
+<link rel="stylesheet" href="assets/style-dark.css">
 <link href="https://cdn.boxicons.com/3.0.8/fonts/basic/boxicons.min.css" rel="stylesheet">
 <link href="https://cdn.boxicons.com/3.0.8/fonts/filled/boxicons-filled.min.css" rel="stylesheet">
 <style>
