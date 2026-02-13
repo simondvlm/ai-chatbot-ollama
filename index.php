@@ -553,7 +553,7 @@ function analyzeData() {
     message += ` | Risque: ${p.risk}`;
 
     const encoded = encodeURIComponent(message);
-    window.location.href = `../chatbot/chatbot.php?auto=1&q=${encoded}`;
+    window.location.href = `../ai-chatbot-ollama/chatbot.php?auto=1&q=${encoded}`;
 }
 
 document.addEventListener('DOMContentLoaded', function() {
