@@ -105,7 +105,7 @@ $systemSentences = $user['system_sentences'] ?? '';
             <label style="margin-left:10px;">Historique</label>
             <button onclick="location.href='../ai-chatbot-ollama/history_chatbot.php'" style="width:85%;margin-left:20px;" class="new-chat-btn">Voir l'historique</button>
         </div>
-        <div class="sidebar-content">
+        <div class="settings-group">
             <br>
         </div>
         <div class="sidebar-footer">
